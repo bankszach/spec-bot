@@ -1,8 +1,8 @@
-langchain>=0.1.0
-langchain-openai>=0.0.5
-langchain-community>=0.0.5
-openai>=1.0.0
-python-dotenv>=1.0.0
-pytest>=7.0.0
-black>=23.0.0
-flake8>=6.0.0 
+streamlit
+chromadb
+langchain
+langgraph
+openai>=1.14  # or llama-cpp-python if using local LLM
+pypdf         # PDF text extraction
+python-dotenv # .env support
+tqdm 
