@@ -1,72 +1,90 @@
-# SoloChain
+<!-- BEGIN SPEC-BOT OVERVIEW -->
+# Spec-Bot – LLM Context & On-Ramp
 
-**AI‑first LangChain template for one‑person development teams**
+## 1 · Purpose  
+A lightweight RAG-powered assistant that lets construction pros **ask natural-language questions about spec books (PDF)** and receive answers with **page-level citations**. Built on the SoloChain agent scaffold.
 
-SoloChain is a lightweight, opinionated starter kit that lets a solo developer orchestrate
-LLM agents, tools, and CI workflows from day‑zero. It focuses on real‑world productivity—not demos—so you can ship usable software while learning LangChain.
+## 2 · Core Objectives
+| # | Objective | Success metric |
+|---|-----------|---------------|
+| 1 | Instant spec Q-A with citations | ≤ 3 s response on 400-page PDF |
+| 2 | Zero setup for users           | Drag-drop PDF + prompt in browser |
+| 3 | Auditability                   | Clickable links jump to page thumbnail |
+| 4 | Extensibility                  | Add RFI-draft & submittal tools in v1.1 |
 
----
-## Why SoloChain?
-* **Agentic workflow** – Pre‑wired _planning → coding → testing → PR_ loop using LangChain`s `AgentExecutor` plus GitHub CLI.
-* **Cursor‑friendly** – Repository layout and `make` targets match Cursor IDE shortcuts.
-* **Model‑agnostic** – Default OpenAI GPT‑4o, but easily swap to Gemini, Claude, or local Llama via environment.
-* **Trace & eval built‑in** – LangSmith tracing and unit‑test harness ready out of the box.
-* **Tiny footprint** – ≤300 LOC core; no heavy web backend.
-
----
-## Key Components
-| Path | Purpose |
-|------|---------|
-| `agent/agent.py` | Main LangChain agent (planning + tool selection) |
-| `tools/git_tools.py` | Wrapper around `gh` CLI for branch/PR ops |
-| `tools/tests.py` | PyTest invocation + result parser |
-| `memory/` | Conversation and episodic memory stores |
-| `scripts/agent_cli.py` | TTY entry‑point for quick experiments |
-| `.github/workflows/ci.yml` | Lint, test, LangSmith trace upload |
-
----
-## Quick‑start
-```bash
-# 1. Fork or clone
-$ git clone https://github.com/<your‑user>/solochain.git && cd solochain
-
-# 2. Python env
-$ python -m venv .venv && source .venv/bin/activate
-$ pip install -r requirements.txt
-
-# 3. Environment setup
-$ cp .env.example .env
-$ # Edit .env and add your API keys:
-$ # OPENAI_API_KEY=sk-...
-$ # LANGCHAIN_API_KEY=<optional>
-
-# 4. Fire up the CLI agent
-$ python scripts/agent_cli.py "add unit tests for tools/git_tools.py"
+## 3 · High-Level Architecture
+```mermaid
+graph TD
+  A[Streamlit Front-end] -->|Upload PDF| B[Ingestion]
+  B -->|Chunks + Embeddings| C[Chroma Vector Store]
+  D[User question] --> E[LangGraph Agent]
+  C --> E
+  E -->|Answer + cites| A
+  subgraph Tools
+    T1[query_specs]
+    T2[open_branch]
+    T3[git_commit]
+  end
+  E -->|Calls| Tools
 ```
 
----
-## Development Flow
-1. **Spec in ChatGPT** – Outline feature → produce task list.
-2. **Sync tasks** – Paste list into `TODO.md`; run `make plan` (agent turns tasks into tracked GitHub Issues).
-3. **Implement in Cursor** – Use Cursor Tab for code & tests.
-4. **Augment in VS Code** – Open branch, let Copilot Agent propose refactors.
-5. **PR Review** – Copilot review bot + human squash merge.
-6. **CI/CD** – GitHub Actions builds & deploys (optional Heroku render).
+*Agent planner*: LangGraph → chooses `query_specs`, Git ops.  
+*Retrieval*: PDF → docs → embeddings (OpenAI or Llama).  
+*Persistence*: Chroma DB in `./data/<project>/`.
 
----
-## Roadmap
-- [ ] GUI front‑end (Streamlit)
-- [ ] Self‑hosted embedding DB (Chroma)
-- [ ] Auto‑license scanner tool
-- [ ] Agents that comment on Slack/Discord
+## 4 · Repository Layout
+| Path | Description |
+|------|-------------|
+| `app/`                   | Streamlit UI & handlers |
+| `agent/`                 | LangGraph agent core (forked from SoloChain) |
+| `tools/`                 | Tool wrappers (`query_specs.py`, git helpers) |
+| `data/`                  | Persistent vector stores by project |
+| `.github/workflows/`     | CI – lint, pytest, deploy preview |
 
----
-## Requirements
-* Python ≥3.11
-* GitHub CLI (`brew install gh` or `scoop install gh`)
-* Cursor IDE or VS Code
+## 5 · Getting Started (Dev)
+```bash
+git clone https://github.com/bankszach/spec-bot.git && cd spec-bot
+python -m venv .venv && source .venv/bin/activate
+pip install -r requirements.txt
+cp .env.example .env    # add OPENAI_API_KEY
 
----
-## License
-MIT © 2025 Zach Banks
+# ingest sample spec & launch
+python scripts/ingest_pdf.py docs/sample_spec.pdf --project demo
+streamlit run app/main.py
+```
+
+## 6 · Tool Contracts
+**`query_specs(question: str, project: str) → dict`**  
+Returns:
+```json
+{
+  "answer": "string",
+  "citations": [
+    { "page": 123, "snippet": "… anodized finish …" }
+  ]
+}
+```
+
+**Git helpers (unchanged)**  
+* `open_branch(name)` – create & checkout branch  
+* `git_commit(msg, files)` – stage `files[]`, commit
+
+## 7 · Dev Roadmap
+- [ ] MVP UI upload & QA  
+- [ ] Chroma per-project persistence  
+- [ ] e2e test with sample PDF  
+- [ ] Deploy (Streamlit Cloud / Vercel)  
+- [ ] RFI auto-draft tool
+
+## 8 · Solo-Dev Workflow
+1. Open issue for roadmap item  
+2. `agent_cli "Spec: implement X"` (opens branch)  
+3. Code in Cursor; `pytest`  
+4. Push branch; open PR
+
+## 9 · LLM Prompt Context
+> *"You are Spec-Bot, an assistant that answers technical spec questions for construction documents. Always cite page numbers and relevant section headers. If unsure, say 'I couldn't locate that requirement in the provided specification.'"*
+
+© 2025 Zach Banks  
+<!-- END SPEC-BOT OVERVIEW -->
 
